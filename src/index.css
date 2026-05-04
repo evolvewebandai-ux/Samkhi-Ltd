@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2E7D32;
+  --color-primary-accent: #4CAF50;
+  --color-secondary: #0B2E59;
+  --color-cta: #FFC107;
+  --color-background: #FFFFFF;
+  --color-surface: #F9FAFB;
+  
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", var(--font-sans);
+
+  --accent-green: #10b981;
+  --accent-green-glow: rgba(16, 185, 129, 0.15);
+
+  --shadow-enterprise: 0 10px 30px -10px rgba(11, 46, 89, 0.15), 0 5px 15px -5px rgba(11, 46, 89, 0.05);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-slate-900 antialiased;
+  }
+}
+
+.grid-bg {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(11, 46, 89, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 46, 89, 0.03) 1px, transparent 1px);
+}
+
+.glass {
+  @apply bg-white/80 backdrop-blur-md border border-white/20;
+}
+
+.btn-primary {
+  @apply bg-primary hover:bg-primary-accent text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-enterprise hover:shadow-2xl active:scale-95 flex items-center justify-center gap-2;
+}
+
+.btn-secondary {
+  @apply bg-secondary hover:bg-secondary/90 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-enterprise hover:shadow-2xl active:scale-95 flex items-center justify-center gap-2;
+}
+
+.btn-cta {
+  @apply bg-cta hover:bg-cta/90 text-slate-900 font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-enterprise hover:shadow-2xl active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wide;
+}
+
+.card-hover {
+  @apply transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl;
+}
