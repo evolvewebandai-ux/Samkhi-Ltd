@@ -1,14 +1,55 @@
 import { motion } from 'motion/react';
 import { Mail, Phone, MapPin, Clock, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
 import React, { useState } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 
 export default function Contact() {
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success'>('idle');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: 'General Inquiry',
+    message: ''
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus('submitting');
-    setTimeout(() => setStatus('success'), 1500);
+    
+    try {
+      const id = `lead_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const leadData = {
+        id,
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        subject: formData.subject,
+        message: formData.message.trim(),
+        source: 'contact-message',
+        stage: 'new',
+        createdAt: new Date().toISOString(),
+        notes: ''
+      };
+
+      await setDoc(doc(db, 'leads', id), leadData);
+      setStatus('success');
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        subject: 'General Inquiry',
+        message: ''
+      });
+    } catch (err) {
+      console.error("Error submitting contact lead:", err);
+      try {
+        handleFirestoreError(err, OperationType.CREATE, 'leads');
+      } catch (wrapperErr) {
+        setStatus('idle');
+      }
+    }
   };
 
   return (
@@ -31,15 +72,15 @@ export default function Contact() {
         </div>
       </section>
 
-      <section className="py-24 -mt-10 relative z-20">
+      <section className="pt-12 pb-8 md:py-24 -mt-10 relative z-20">
         <div className="max-w-7xl mx-auto px-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             
             {/* Contact Info Cards */}
             <div className="space-y-10">
               {/* Ocho Rios Group */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-2 mb-2">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 px-2">
                   <div className="h-px flex-1 bg-slate-200" />
                   <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Ocho Rios</span>
                   <div className="h-px flex-1 bg-slate-200" />
@@ -60,8 +101,8 @@ export default function Contact() {
               </div>
 
               {/* Drax Hall Group */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 px-2 mb-2">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 px-2">
                   <div className="h-px flex-1 bg-slate-200" />
                   <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Drax Hall</span>
                   <div className="h-px flex-1 bg-slate-200" />
@@ -82,7 +123,12 @@ export default function Contact() {
               </div>
 
               {/* General Support Group */}
-              <div className="space-y-4 pt-4">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 px-2">
+                  <div className="h-px flex-1 bg-slate-200" />
+                  <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Support & Hours</span>
+                  <div className="h-px flex-1 bg-slate-200" />
+                </div>
                 <ContactCard 
                   icon={Mail} 
                   title="Email Support" 
@@ -133,6 +179,8 @@ export default function Contact() {
                           type="text" 
                           placeholder="What should we call you?"
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all font-medium placeholder:text-slate-400"
+                          value={formData.name}
+                          onChange={e => setFormData({ ...formData, name: e.target.value })}
                           required
                         />
                       </div>
@@ -142,6 +190,8 @@ export default function Contact() {
                           type="email" 
                           placeholder="Your professional email"
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all font-medium placeholder:text-slate-400"
+                          value={formData.email}
+                          onChange={e => setFormData({ ...formData, email: e.target.value })}
                           required
                         />
                       </div>
@@ -154,6 +204,8 @@ export default function Contact() {
                           type="tel" 
                           placeholder="+1 (876) ..."
                           className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all font-medium placeholder:text-slate-400"
+                          value={formData.phone}
+                          onChange={e => setFormData({ ...formData, phone: e.target.value })}
                           required
                         />
                       </div>
@@ -162,13 +214,15 @@ export default function Contact() {
                         <div className="relative">
                           <select 
                             className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all font-medium appearance-none cursor-pointer"
+                            value={formData.subject}
+                            onChange={e => setFormData({ ...formData, subject: e.target.value })}
                             required
                           >
-                            <option>General Inquiry</option>
-                            <option>LED Lighting Project</option>
-                            <option>Residential Solar Quote</option>
-                            <option>Commercial Energy Solutions</option>
-                            <option>Technical Support</option>
+                            <option value="General Inquiry">General Inquiry</option>
+                            <option value="LED Lighting Project">LED Lighting Project</option>
+                            <option value="Residential Solar Quote">Residential Solar Quote</option>
+                            <option value="Commercial Energy Solutions">Commercial Energy Solutions</option>
+                            <option value="Technical Support">Technical Support</option>
                           </select>
                           <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                              <svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M1 1L6 6L11 1" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
@@ -183,6 +237,8 @@ export default function Contact() {
                         rows={6}
                         placeholder="Tell us about your project or energy needs..."
                         className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-5 outline-none focus:bg-white focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all font-medium resize-none placeholder:text-slate-400"
+                        value={formData.message}
+                        onChange={e => setFormData({ ...formData, message: e.target.value })}
                         required
                       ></textarea>
                     </div>
@@ -214,7 +270,7 @@ export default function Contact() {
       </section>
 
       {/* Map Section */}
-      <section className="py-24 bg-white overflow-hidden">
+      <section className="pt-4 pb-12 md:py-24 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-4">
           <div className="bg-slate-200 h-[500px] rounded-[3rem] overflow-hidden relative shadow-enterprise group border border-slate-100">
              <iframe 
@@ -224,16 +280,18 @@ export default function Contact() {
                loading="lazy" 
                referrerPolicy="no-referrer-when-downgrade"
              ></iframe>
-             <div className="absolute top-8 left-8 pointer-events-none">
-                <div className="bg-secondary text-white p-6 rounded-3xl shadow-2xl relative z-10 border border-white/20">
-                   <div className="flex items-center gap-4 mb-2">
-                      <div className="p-3 bg-cta rounded-xl text-secondary">
-                         <MapPin size={20} />
-                      </div>
-                      <div>
-                         <h4 className="font-display font-black text-lg">Samkhi Limited</h4>
-                         <p className="text-slate-400 text-xs uppercase tracking-widest">Main Showroom</p>
-                      </div>
+             <div className="hidden md:block absolute top-6 right-6 md:top-8 md:right-8 pointer-events-none">
+                <div className="bg-white text-secondary px-5 py-4 md:px-6 md:py-4.5 rounded-2xl md:rounded-3xl shadow-2xl relative z-10 border border-slate-200/80 flex items-center gap-4">
+                   <img 
+                     src="https://lh3.googleusercontent.com/d/1y5j5nsQpvc5Rgdo2OP_ZN6K9sAqMg3Uw" 
+                     alt="Samkhi Ltd." 
+                     className="h-8 md:h-10 w-auto object-contain"
+                     referrerPolicy="no-referrer"
+                   />
+                   <div className="h-7 w-px bg-slate-200" />
+                   <div>
+                      <span className="font-display font-black text-secondary text-sm md:text-base leading-tight block">Main Showroom</span>
+                      <span className="text-[10px] md:text-[11px] font-bold text-primary uppercase tracking-widest block">Ocho Rios, Jamaica</span>
                    </div>
                 </div>
              </div>
@@ -258,5 +316,5 @@ function ContactCard({ icon: Icon, title, info, subInfo, href }: any) {
     </div>
   );
 
-  return href ? <a href={href}>{content}</a> : <div>{content}</div>;
+  return href ? <a href={href} className="block">{content}</a> : <div className="block">{content}</div>;
 }

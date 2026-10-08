@@ -43,7 +43,7 @@ export default function CartPage() {
                   </Link>
 
                   <div className="flex-1 text-center md:text-left">
-                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{item.category.replace('-', ' ')}</span>
+                    <span className="text-[10px] font-black text-primary uppercase tracking-[0.2em]">{(item.tags && item.tags[0]) || item.brand || 'General'}</span>
                     <Link to={`/product/${item.id}`} className="block mt-1">
                       <h3 className="text-xl font-bold text-secondary hover:text-primary transition-colors">{item.name}</h3>
                     </Link>
@@ -119,7 +119,24 @@ export default function CartPage() {
                   </div>
                </div>
 
-               <Link to="/checkout" className="btn-cta w-full py-5 text-xl">
+               <Link 
+                  to="/checkout" 
+                  onClick={() => {
+                    if (typeof (window as any).logCustomTelemetry === 'function') {
+                      (window as any).logCustomTelemetry('begin_checkout', {
+                        value: totalPrice,
+                        currency: 'JMD',
+                        items: cart.map(item => ({
+                          item_id: item.id,
+                          item_name: item.name,
+                          price: item.price,
+                          quantity: item.quantity
+                        }))
+                      });
+                    }
+                  }}
+                  className="btn-cta w-full py-5 text-xl"
+               >
                   Checkout Now
                   <ArrowRight size={24} />
                </Link>

@@ -1,0 +1,478 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Represents a solar or lighting product available on Samkhi",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID/slug of the product" },
+        "name": { "type": "string", "description": "The brand and product title" },
+        "description": { "type": "string", "description": "Story, description, or features" },
+        "price": { "type": "number", "description": "The price of the product" },
+        "category": { "type": "string", "description": "Product category slug" },
+        "imageUrl": { "type": "string", "description": "Main product image URL" },
+        "brand": { "type": "string", "description": "Brand/Vendor name" },
+        "inStock": { "type": "boolean", "description": "True if the item is in stock" },
+        "isFeatured": { "type": "boolean", "description": "True if product is shown on landing page" }
+      },
+      "required": ["id", "name", "price", "inStock"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Represents a customer purchase order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique Order ID" },
+        "customerName": { "type": "string", "description": "Buyer name" },
+        "customerEmail": { "type": "string", "description": "Buyer email" },
+        "customerPhone": { "type": "string", "description": "Buyer phone number" },
+        "date": { "type": "string", "description": "Date of the order" },
+        "subtotal": { "type": "number", "description": "Order subtotal" },
+        "taxes": { "type": "number", "description": "GCT taxes" },
+        "total": { "type": "number", "description": "Total checkout amount" },
+        "discountCode": { "type": "string" },
+        "discountAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "paid", "fulfilled", "cancelled"] },
+        "paymentStatus": { "type": "string", "enum": ["pending", "paid", "unpaid", "refunded"] },
+        "fulfillmentStatus": { "type": "string", "enum": ["unfulfilled", "fulfilled", "restocked"] },
+        "items": { "type": "number" }
+      },
+      "required": ["id", "customerName", "customerEmail", "total", "status", "paymentStatus", "fulfillmentStatus"]
+    },
+    "Discount": {
+      "title": "Discount Coupon",
+      "description": "Coupons and discount codes for Checkout",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique UUID for the discount coupon" },
+        "code": { "type": "string", "description": "Capitalized coupon code string" },
+        "type": { "type": "string", "enum": ["Percentage", "Fixed Amount", "Free Shipping"] },
+        "value": { "type": "string", "description": "The discount value as a string representation" },
+        "status": { "type": "string", "enum": ["Active", "Scheduled", "Expired"] },
+        "used": { "type": "number", "description": "Total times this coupon was used" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "minPurchase": { "type": "number" }
+      },
+      "required": ["id", "code", "type", "value", "status"]
+    },
+    "Customer": {
+      "title": "Customer Profile",
+      "description": "Information about a store customer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The email ID sanitized with underscores" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "name": { "type": "string", "description": "Full name of the customer" },
+        "email": { "type": "string", "description": "Email address" },
+        "phone": { "type": "string" },
+        "location": { "type": "string", "description": "Location parish/city in Jamaica" },
+        "orders": { "type": "number", "description": "Total orders count" },
+        "spent": { "type": "number", "description": "Total spent amount in JMD" },
+        "lastOrder": { "type": "string", "description": "Formatted date of last order" },
+        "loyaltyPoints": { "type": "number", "description": "Loyalty program balance" },
+        "wishlist": { "type": "array", "description": "Array of saved product IDs" },
+        "addresses": { "type": "array", "description": "List of saved delivery addresses" },
+        "savedPayments": { "type": "array", "description": "List of saved tokenized payment methods" },
+        "emailPreferences": { "type": "object" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "ProductReview": {
+      "title": "Product Review",
+      "description": "Customer feedback and ratings for purchased items",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "verifiedPurchase": { "type": "boolean" }
+      },
+      "required": ["productId", "productName", "rating", "comment", "createdAt"]
+    },
+    "InventoryLevel": {
+      "title": "Inventory Level",
+      "description": "Warehouse stock levels for products and variants",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "variantId": { "type": "string" },
+        "quantityOnHand": { "type": "number" },
+        "quantityReserved": { "type": "number" },
+        "quantityAvailable": { "type": "number" },
+        "quantityIncoming": { "type": "number" },
+        "reorderPoint": { "type": "number" },
+        "reorderQuantity": { "type": "number" },
+        "lowStockThreshold": { "type": "number" },
+        "isTracked": { "type": "boolean" },
+        "lastCountedAt": { "type": "string" }
+      },
+      "required": ["id", "productId", "quantityOnHand", "quantityReserved", "quantityAvailable"]
+    },
+    "InventoryTransaction": {
+      "title": "Inventory Transaction",
+      "description": "Historical audit log of stock movements",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "variantId": { "type": "string" },
+        "transactionType": { "type": "string" },
+        "quantityChange": { "type": "number" },
+        "quantityBefore": { "type": "number" },
+        "quantityAfter": { "type": "number" },
+        "referenceType": { "type": "string" },
+        "referenceId": { "type": "string" },
+        "notes": { "type": "string" },
+        "performedBy": { "type": "string" },
+        "performedAt": { "type": "string" }
+      },
+      "required": ["id", "productId", "transactionType", "quantityChange", "quantityBefore", "quantityAfter", "referenceType", "performedAt"]
+    },
+    "Supplier": {
+      "title": "Supplier",
+      "description": "Manufacturing vendor details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "contactName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "address": { "type": "string" },
+        "leadTimeDays": { "type": "number" },
+        "notes": { "type": "string" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["id", "name", "isActive"]
+    },
+    "PurchaseOrder": {
+      "title": "Purchase Order",
+      "description": "Inventory acquisition PO",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "poNumber": { "type": "string" },
+        "supplierId": { "type": "string" },
+        "status": { "type": "string" },
+        "orderDate": { "type": "string" },
+        "expectedDeliveryDate": { "type": "string" },
+        "actualDeliveryDate": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdBy": { "type": "string" }
+      },
+      "required": ["id", "poNumber", "supplierId", "status", "orderDate"]
+    },
+    "PurchaseOrderItem": {
+      "title": "Purchase Order Item",
+      "description": "Line items on a purchase order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "poId": { "type": "string" },
+        "productId": { "type": "string" },
+        "variantId": { "type": "string" },
+        "quantityOrdered": { "type": "number" },
+        "quantityReceived": { "type": "number" },
+        "unitCost": { "type": "number" }
+      },
+      "required": ["id", "poId", "productId", "quantityOrdered", "unitCost"]
+    },
+    "Collection": {
+      "title": "Collection",
+      "description": "Represents a grouped collection of products (manual or automated)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "handle": { "type": "string" },
+        "description_html": { "type": "string" },
+        "image_url": { "type": "string" },
+        "collection_type": { "type": "string", "enum": ["manual", "automated"] },
+        "rule_set": { "type": "object" },
+        "sort_order": { "type": "string" },
+        "seo_title": { "type": "string" },
+        "seo_description": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "draft"] },
+        "products_count": { "type": "number" },
+        "published_channels": { "type": "array" }
+      },
+      "required": ["id", "title", "handle", "collection_type", "status"]
+    },
+    "CollectionProduct": {
+      "title": "Collection Product Sibling Layout",
+      "description": "Relational link between manual collections and products with specific sorting index position",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "collection_id": { "type": "string" },
+        "product_id": { "type": "string" },
+        "position": { "type": "number" }
+      },
+      "required": ["id", "collection_id", "product_id", "position"]
+    },
+    "Tag": {
+      "title": "Tag Concept",
+      "description": "Global normalized tags for advanced e-commerce organization",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "slug": { "type": "string" },
+        "products_count": { "type": "number" }
+      },
+      "required": ["id", "name", "slug", "products_count"]
+    },
+    "ShippingRate": {
+      "title": "Shipping Rate",
+      "description": "Represents parish and zone-specific shipping fees",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "parish_code": { "type": "string" },
+        "type": { "type": "string", "enum": ["parish", "custom_zone"] },
+        "rate": { "type": "number" },
+        "estimated_days": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "free_shipping_threshold": { "type": "number" },
+        "sort_order": { "type": "number" }
+      },
+      "required": ["id", "name", "parish_code", "type", "rate", "estimated_days", "is_active", "sort_order"]
+    },
+    "PickupLocation": {
+      "title": "Pickup Location",
+      "description": "Represents physical storefronts/warehouses where orders can be picked up",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "parish": { "type": "string" },
+        "phone": { "type": "string" },
+        "hours": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "is_default": { "type": "boolean" }
+      },
+      "required": ["id", "name", "address", "parish", "phone", "hours", "is_active", "is_default"]
+    },
+    "NotificationTemplate": {
+      "title": "Notification Template",
+      "description": "Email templates for transactional notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "event_trigger": { "type": "string" },
+        "channel": { "type": "string" },
+        "is_active": { "type": "boolean" },
+        "subject": { "type": "string" },
+        "preheader": { "type": "string" },
+        "body_html": { "type": "string" },
+        "body_text": { "type": "string" },
+        "sendgrid_template_id": { "type": "string" },
+        "variables": { "type": "array" },
+        "updated_at": { "type": "string" },
+        "updated_by": { "type": "string" }
+      },
+      "required": ["id", "name", "event_trigger", "channel", "is_active", "subject", "body_html"]
+    },
+    "NotificationLog": {
+      "title": "Notification Log",
+      "description": "Logs of dispatched transactional notifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "template_id": { "type": "string" },
+        "event_trigger": { "type": "string" },
+        "to_email": { "type": "string" },
+        "order_id": { "type": "string" },
+        "status": { "type": "string", "enum": ["queued", "sent", "delivered", "opened", "clicked", "bounced", "failed"] },
+        "sendgrid_message_id": { "type": "string" },
+        "error": { "type": "string" },
+        "sent_at": { "type": "string" }
+      },
+      "required": ["id", "template_id", "event_trigger", "to_email", "status", "sent_at"]
+    },
+    "Lead": {
+      "title": "Website Lead",
+      "description": "Represents a prospective client or contact of Samkhi Limited",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "The unique ID of the lead" },
+        "name": { "type": "string", "description": "Full name of the lead" },
+        "email": { "type": "string", "description": "Email address" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "parish": { "type": "string", "description": "Parish residence in Jamaica" },
+        "monthlyBill": { "type": "string", "description": "Average monthly power bill of the lead" },
+        "propertyType": { "type": "string", "description": "Property type (Residential or Commercial)" },
+        "source": { "type": "string", "description": "Where the lead was captured (solar-solutions, commercial, scaler-savings, contact-message)" },
+        "subject": { "type": "string", "description": "Subject line (for contact message)" },
+        "message": { "type": "string", "description": "Subject description or custom message" },
+        "notes": { "type": "string", "description": "Internal follow-up and tracking notes" },
+        "stage": { "type": "string", "enum": ["new", "contacted", "assigned", "closed"], "description": "The pipeline processing status" },
+        "createdAt": { "type": "string", "description": "ISO timestamp when the lead was captured" }
+      },
+      "required": ["id", "name", "email", "source", "stage", "createdAt"]
+    },
+    "ReturnRequest": {
+      "title": "Return Request",
+      "description": "Customer return and RMA tickets",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "refundAmount": { "type": "number" },
+        "condition": { "type": "string" },
+        "notes": { "type": "string" },
+        "requestedAt": { "type": "string" }
+      },
+      "required": ["id", "orderId", "customerEmail", "status"]
+    },
+    "WarrantyRecord": {
+      "title": "Warranty Record",
+      "description": "Equipment warranty registrations and claims",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "serialNumber": { "type": "string" },
+        "durationMonths": { "type": "number" },
+        "startDate": { "type": "string" },
+        "expiryDate": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "orderId", "customerName", "productId", "serialNumber"]
+    },
+    "CartRecord": {
+      "title": "Cart Record",
+      "description": "Active and abandoned shopper shopping carts",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "totalItems": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "customerEmail": { "type": "string" },
+        "status": { "type": "string" },
+        "lastUpdated": { "type": "string" }
+      },
+      "required": ["id", "totalItems", "totalPrice", "status"]
+    },
+    "InstallationJob": {
+      "title": "Installation Job",
+      "description": "Field solar technician work orders and schedules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string" },
+        "customerName": { "type": "string" },
+        "status": { "type": "string" },
+        "scheduledDate": { "type": "string" }
+      },
+      "required": ["id", "customerName", "status"]
+    }
+  },
+  "firestore": {
+    "shipping_rates/{rateId}": {
+      "schema": "ShippingRate",
+      "description": "Fulfillment delivery rates for Jamaican parishes"
+    },
+    "pickup_locations/{locationId}": {
+      "schema": "PickupLocation",
+      "description": "Store locations for customers to pick up solar equipment"
+    },
+    "products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of all available products"
+    },
+    "orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of all customer checkout orders"
+    },
+    "discounts/{discountId}": {
+      "schema": "Discount",
+      "description": "Checkout discount coupons"
+    },
+    "customers/{customerId}": {
+      "schema": "Customer",
+      "description": "Managed customer details"
+    },
+    "product_reviews/{reviewId}": {
+      "schema": "ProductReview",
+      "description": "Customer feedback and ratings"
+    },
+    "inventory_levels/{levelId}": {
+      "schema": "InventoryLevel",
+      "description": "Warehouse current stock counts"
+    },
+    "inventory_transactions/{transactionId}": {
+      "schema": "InventoryTransaction",
+      "description": "Audit trail logs of stock takes"
+    },
+    "suppliers/{supplierId}": {
+      "schema": "Supplier",
+      "description": "Tracked procurement suppliers"
+    },
+    "purchase_orders/{poId}": {
+      "schema": "PurchaseOrder",
+      "description": "Acquisitions log metrics"
+    },
+    "purchase_order_items/{itemId}": {
+      "schema": "PurchaseOrderItem",
+      "description": "Detailed PO product amounts list"
+    },
+    "collections/{collectionId}": {
+      "schema": "Collection",
+      "description": "Store main categories and custom smart automated collections list"
+    },
+    "collection_products/{collectionProductId}": {
+      "schema": "CollectionProduct",
+      "description": "Mapped table matching products to specific manual collections and custom order weights"
+    },
+    "tags/{tagId}": {
+      "schema": "Tag",
+      "description": "Consolidated catalog tags list with associated counts"
+    },
+    "notification_templates/{templateId}": {
+      "schema": "NotificationTemplate",
+      "description": "Transactional email templates for specific triggers"
+    },
+    "notification_logs/{logId}": {
+      "schema": "NotificationLog",
+      "description": "Logs of sent notification deliveries"
+    },
+    "leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Captured website interest contact inquiries"
+    },
+    "returns/{returnId}": {
+      "schema": "ReturnRequest",
+      "description": "Customer return and RMA tickets"
+    },
+    "warranties/{warrantyId}": {
+      "schema": "WarrantyRecord",
+      "description": "Equipment warranty registrations and claims"
+    },
+    "carts/{cartId}": {
+      "schema": "CartRecord",
+      "description": "Active and abandoned shopper shopping carts"
+    },
+    "installations/{jobId}": {
+      "schema": "InstallationJob",
+      "description": "Field solar technician work orders and schedules"
+    }
+  }
+}

@@ -1,25 +1,149 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { PRODUCTS, CATEGORIES } from '../data';
+import { useProducts } from '../context/ProductContext';
+import { COLLECTIONS } from '../data';
 import ProductCard from '../components/ProductCard';
 import { Search, SlidersHorizontal, ChevronDown, LayoutGrid, List } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { db } from '../firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
+
+// Rule evaluator helper for automated collections
+export function matchProductToRules(product: any, ruleSet: any): boolean {
+  if (!ruleSet || !ruleSet.conditions || ruleSet.conditions.length === 0) return false;
+  
+  const results = ruleSet.conditions.map((cond: any) => {
+    let prodValue = "";
+    if (cond.field === 'title') prodValue = product.name || "";
+    else if (cond.field === 'tag') {
+      const tags = product.tags || [];
+      const val = cond.value?.toLowerCase() || "";
+      if (cond.operator === 'equals') return tags.some((t: string) => t.toLowerCase() === val);
+      if (cond.operator === 'not_equals') return !tags.some((t: string) => t.toLowerCase() === val);
+      if (cond.operator === 'contains') return tags.some((t: string) => t.toLowerCase().includes(val));
+      if (cond.operator === 'not_contains') return !tags.some((t: string) => t.toLowerCase().includes(val));
+      return false;
+    }
+    else if (cond.field === 'type') {
+      const tags = product.tags || [];
+      return tags.some((t: string) => t.toLowerCase() === (cond.value || "").toLowerCase());
+    }
+    else if (cond.field === 'vendor') prodValue = product.brand || "";
+    else if (cond.field === 'price') {
+      const pPrice = Number(product.price) || 0;
+      const cValue = Number(cond.value) || 0;
+      if (cond.operator === 'equals') return pPrice === cValue;
+      if (cond.operator === 'not_equals') return pPrice !== cValue;
+      if (cond.operator === 'greater_than') return pPrice > cValue;
+      if (cond.operator === 'less_than') return pPrice < cValue;
+      return false;
+    }
+
+    const testVal = String(prodValue).toLowerCase();
+    const condVal = String(cond.value).toLowerCase();
+
+    switch (cond.operator) {
+      case 'equals': return testVal === condVal;
+      case 'not_equals': return testVal !== condVal;
+      case 'contains': return testVal.includes(condVal);
+      case 'not_contains': return !testVal.includes(condVal);
+      case 'starts_with': return testVal.startsWith(condVal);
+      case 'ends_with': return testVal.endsWith(condVal);
+      case 'greater_than': return Number(prodValue) > Number(cond.value);
+      case 'less_than': return Number(prodValue) < Number(cond.value);
+      default: return false;
+    }
+  });
+
+  if (ruleSet.match === 'any') {
+    return results.some(r => r === true);
+  } else {
+    return results.every(r => r === true);
+  }
+}
 
 export default function Shop() {
+  const { products } = useProducts();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
 
-  const activeCategory = searchParams.get('category') || 'all';
+  useEffect(() => {
+    setSearchQuery(searchParams.get('q') || '');
+  }, [searchParams]);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    if (val) {
+      searchParams.set('q', val);
+    } else {
+      searchParams.delete('q');
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  // Dynamic Collections Sync from Firestore
+  const [collections, setCollections] = useState<any[]>([]);
+  const [collectionProducts, setCollectionProducts] = useState<any[]>([]);
+  const [loadingCollections, setLoadingCollections] = useState(true);
+
+  useEffect(() => {
+    const unsubColl = onSnapshot(collection(db, 'collections'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach(d => {
+        list.push({ id: d.id, ...d.data() });
+      });
+      setCollections(list.length > 0 ? list : COLLECTIONS);
+      setLoadingCollections(false);
+    }, (error) => {
+      console.warn("Unable to fetch collections, falling back to seed data", error);
+      setCollections(COLLECTIONS);
+      setLoadingCollections(false);
+    });
+
+    const unsubLinks = onSnapshot(collection(db, 'collection_products'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach(d => {
+        list.push({ id: d.id, ...d.data() });
+      });
+      setCollectionProducts(list);
+    }, (error) => {
+      console.warn("Unable to fetch collection products mapping:", error);
+    });
+
+    return () => {
+      unsubColl();
+      unsubLinks();
+    };
+  }, []);
+
+  const activeCollection = searchParams.get('collection') || 'all';
 
   const filteredProducts = useMemo(() => {
-    let result = PRODUCTS;
+    let result = products;
 
-    if (activeCategory !== 'all') {
-      result = result.filter(p => p.category === activeCategory);
+    if (activeCollection !== 'all') {
+      const col = collections.find(c => c.id === activeCollection);
+      if (col) {
+        const type = col.collection_type || col.type;
+        if (type === 'automated') {
+          const ruleSet = col.rule_set || { conditions: col.conditions || [], match: col.conditionOperator || 'all' };
+          result = result.filter(p => matchProductToRules(p, ruleSet));
+        } else {
+          const mappedProductIds = collectionProducts
+            .filter((link: any) => link.collection_id === col.id)
+            .map((link: any) => link.product_id);
+          result = result.filter(p => mappedProductIds.includes(p.id));
+        }
+      } else {
+        // Fallback or custom matching
+        result = result.filter(p => p.tags?.some(t => t.toLowerCase() === activeCollection.toLowerCase()));
+      }
     }
 
     if (searchQuery) {
@@ -31,17 +155,31 @@ export default function Shop() {
       );
     }
 
+    if (minPrice) {
+      const min = parseFloat(minPrice);
+      if (!isNaN(min)) {
+        result = result.filter(p => p.price >= min);
+      }
+    }
+
+    if (maxPrice) {
+      const max = parseFloat(maxPrice);
+      if (!isNaN(max)) {
+        result = result.filter(p => p.price <= max);
+      }
+    }
+
     if (sortBy === 'price-low') result = [...result].sort((a, b) => a.price - b.price);
     if (sortBy === 'price-high') result = [...result].sort((a, b) => b.price - a.price);
 
     return result;
-  }, [activeCategory, searchQuery, sortBy]);
+  }, [products, collections, collectionProducts, activeCollection, searchQuery, sortBy, minPrice, maxPrice]);
 
-  const handleCategoryChange = (catId: string) => {
-    if (catId === 'all') {
-      searchParams.delete('category');
+  const handleCollectionChange = (collId: string) => {
+    if (collId === 'all') {
+      searchParams.delete('collection');
     } else {
-      searchParams.set('category', catId);
+      searchParams.set('collection', collId);
     }
     setSearchParams(searchParams);
   };
@@ -62,29 +200,55 @@ export default function Shop() {
           {/* Sidebar Filters */}
           <aside className="lg:w-64 space-y-8 hidden lg:block">
             <div>
-              <h3 className="text-sm font-black text-secondary uppercase tracking-widest mb-6 border-b border-slate-200 pb-2">Categories</h3>
+              <h3 className="text-sm font-black text-secondary uppercase tracking-widest mb-6 border-b border-slate-200 pb-2">Collections</h3>
               <div className="space-y-2">
                 <button 
-                  onClick={() => handleCategoryChange('all')}
+                  onClick={() => handleCollectionChange('all')}
                   className={cn(
                     "w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all",
-                    activeCategory === 'all' ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-100"
+                    activeCollection === 'all' ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-100"
                   )}
                 >
                   All Products
                 </button>
-                {CATEGORIES.map(cat => (
+                {collections.map(col => (
                   <button 
-                    key={cat.id}
-                    onClick={() => handleCategoryChange(cat.id)}
+                    key={col.id}
+                    onClick={() => handleCollectionChange(col.id)}
                     className={cn(
                       "w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all",
-                      activeCategory === cat.id ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-500 hover:bg-slate-100"
+                      activeCollection === col.id ? "bg-primary text-white shadow-md shadow-primary/20" : "text-slate-500 hover:bg-slate-100"
                     )}
                   >
-                    {cat.name}
+                    {col.title}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-black text-secondary uppercase tracking-widest mb-6 border-b border-slate-200 pb-2">Price Range</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-black text-slate-400">Min ($)</label>
+                  <input 
+                    type="number" 
+                    placeholder="0"
+                    value={minPrice}
+                    onChange={e => setMinPrice(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm focus:border-primary outline-none"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-black text-slate-400">Max ($)</label>
+                  <input 
+                    type="number" 
+                    placeholder="50000"
+                    value={maxPrice}
+                    onChange={e => setMaxPrice(e.target.value)}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg py-2 px-3 text-sm focus:border-primary outline-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -118,7 +282,7 @@ export default function Shop() {
                   placeholder="Search by name, SKU, or keyword..." 
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
                   value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                  onChange={e => handleSearchChange(e.target.value)}
                 />
               </div>
 
@@ -171,20 +335,48 @@ export default function Shop() {
                    className="lg:hidden bg-white p-6 rounded-2xl shadow-xl border border-slate-100 mb-8 grid grid-cols-1 sm:grid-cols-2 gap-8"
                  >
                     <div>
-                      <h3 className="font-bold text-secondary mb-4">Category</h3>
+                      <h3 className="font-bold text-secondary mb-4">Collection</h3>
                       <div className="flex flex-wrap gap-2">
-                        {['all', ...CATEGORIES.map(c => c.id)].map(id => (
+                        <button 
+                          onClick={() => handleCollectionChange('all')}
+                          className={cn(
+                            "px-4 py-2 rounded-full text-xs font-bold border transition-all",
+                            activeCollection === 'all' ? "bg-primary border-primary text-white" : "border-slate-200 text-slate-500"
+                          )}
+                        >
+                          All Products
+                        </button>
+                        {collections.map(col => (
                           <button 
-                            key={id}
-                            onClick={() => handleCategoryChange(id)}
+                            key={col.id}
+                            onClick={() => handleCollectionChange(col.id)}
                             className={cn(
                               "px-4 py-2 rounded-full text-xs font-bold border transition-all",
-                              activeCategory === id ? "bg-primary border-primary text-white" : "border-slate-200 text-slate-500"
+                              activeCollection === col.id ? "bg-primary border-primary text-white" : "border-slate-200 text-slate-500"
                             )}
                           >
-                            {id.replace('-', ' ')}
+                            {col.title}
                           </button>
                         ))}
+                      </div>
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-secondary mb-4">Price Range</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input 
+                          type="number" 
+                          placeholder="Min Price"
+                          value={minPrice}
+                          onChange={e => setMinPrice(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-4 text-sm"
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="Max Price"
+                          value={maxPrice}
+                          onChange={e => setMaxPrice(e.target.value)}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-4 text-sm"
+                        />
                       </div>
                     </div>
                     <div>
@@ -207,7 +399,7 @@ export default function Shop() {
                 <Search size={48} className="text-slate-200 mx-auto mb-4" />
                 <h2 className="text-xl font-display font-bold text-secondary">No matching products found</h2>
                 <p className="text-slate-500 mb-8">Try adjusting your filters or search terms.</p>
-                <button onClick={() => {setSearchQuery(''); handleCategoryChange('all');}} className="btn-primary">Clear all filters</button>
+                <button onClick={() => {setSearchQuery(''); handleCollectionChange('all'); setMinPrice(''); setMaxPrice('');}} className="btn-primary">Clear all filters</button>
               </div>
             )}
 

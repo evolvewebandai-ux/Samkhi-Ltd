@@ -1,0 +1,18 @@
+# Samkhi Limited Robots Exclusion Standard File
+# Dynamic Build Timestamp: Thu, 16 Jul 2026 22:57:04 GMT
+
+User-agent: *
+Allow: /
+
+# Block search engines from crawling administration or checkout directories
+Disallow: /admin
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /checkout/
+Disallow: /cart
+Disallow: /cart/
+Disallow: /account
+Disallow: /account/
+
+# Point to dynamic sitemap xml location
+Sitemap: https://ais-dev-7empl5mptgbguk3omld2kj-322745861562.us-east1.run.app/sitemap.xml

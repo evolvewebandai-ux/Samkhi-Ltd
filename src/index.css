@@ -1,52 +1,83 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #2E7D32;
-  --color-primary-accent: #4CAF50;
-  --color-secondary: #0B2E59;
-  --color-cta: #FFC107;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-secondary: #1E293B;
+  --color-success: #10B571;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
   --color-background: #FFFFFF;
-  --color-surface: #F9FAFB;
+  --color-surface: #FAF9F6;
+  --color-cta: #F59E0B;
+  --color-cta-dark: #D97706;
+  --color-cta-light: #FEF3C7;
   
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", var(--font-sans);
+  --font-sans: "Poppins", sans-serif;
+  --font-display: "Poppins", sans-serif;
+  --font-mono: "Poppins", sans-serif;
 
-  --accent-green: #10b981;
-  --accent-green-glow: rgba(16, 185, 129, 0.15);
+  --accent-green: #10B571;
+  --accent-green-glow: rgba(16, 181, 113, 0.15);
 
-  --shadow-enterprise: 0 10px 30px -10px rgba(11, 46, 89, 0.15), 0 5px 15px -5px rgba(11, 46, 89, 0.05);
+  --shadow-enterprise: 0 10px 30px -10px rgba(37, 99, 235, 0.15), 0 5px 15px -5px rgba(37, 99, 235, 0.05);
 }
 
 @layer base {
   body {
-    @apply bg-background text-slate-900 antialiased;
+    @apply bg-[#F8FAFC] text-slate-900 antialiased font-sans;
+    font-family: 'Poppins', sans-serif;
+  }
+  input, textarea, select {
+    color: #000000 !important;
   }
 }
 
 .grid-bg {
   background-size: 40px 40px;
   background-image: 
-    linear-gradient(to right, rgba(11, 46, 89, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(11, 46, 89, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, rgba(37, 99, 235, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(37, 99, 235, 0.03) 1px, transparent 1px);
 }
 
 .glass {
   @apply bg-white/80 backdrop-blur-md border border-white/20;
 }
 
+/* Button specs: 42px height, 8px radius, consistent hover states */
 .btn-primary {
-  @apply bg-primary hover:bg-primary-accent text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-enterprise hover:shadow-2xl active:scale-95 flex items-center justify-center gap-2;
+  @apply bg-primary hover:bg-primary-hover text-white font-semibold h-[42px] px-6 rounded-lg transition-all duration-300 shadow-sm active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-sans;
+  font-family: 'Poppins', sans-serif;
 }
 
 .btn-secondary {
-  @apply bg-secondary hover:bg-secondary/90 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-enterprise hover:shadow-2xl active:scale-95 flex items-center justify-center gap-2;
+  @apply bg-secondary hover:bg-secondary/90 text-white font-semibold h-[42px] px-6 rounded-lg transition-all duration-300 shadow-sm active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider font-sans;
+  font-family: 'Poppins', sans-serif;
 }
 
 .btn-cta {
-  @apply bg-cta hover:bg-cta/90 text-slate-900 font-bold py-4 px-8 rounded-xl transition-all duration-300 shadow-enterprise hover:shadow-2xl active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wide;
+  @apply bg-primary hover:bg-primary-hover text-white font-bold h-[42px] px-8 rounded-lg transition-all duration-300 shadow-sm active:scale-[0.98] flex items-center justify-center gap-2 uppercase tracking-wide text-xs font-sans;
+  font-family: 'Poppins', sans-serif;
 }
 
 .card-hover {
-  @apply transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl;
+  @apply transition-all duration-500 hover:-translate-y-2 hover:shadow-lg;
 }
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-family: 'Poppins', sans-serif;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+

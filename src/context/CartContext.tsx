@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { CartItem, Product } from '../types';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { db, cleanUndefined } from '../firebase';
 
 interface CartContextType {
   cart: CartItem[];
@@ -19,9 +21,50 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [cartSessionId] = useState<string>(() => {
+    let existing = localStorage.getItem('samkhi-cart-id');
+    if (!existing) {
+      existing = `cart_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+      localStorage.setItem('samkhi-cart-id', existing);
+    }
+    return existing;
+  });
+
+  // Local storage & Firestore Abandoned Cart sync
   useEffect(() => {
     localStorage.setItem('samkhi-cart', JSON.stringify(cart));
-  }, [cart]);
+
+    // Sync to Firestore 'carts' collection for Abandoned Cart recovery
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const userEmail = localStorage.getItem('samkhi_customer_email') || localStorage.getItem('customer_email') || undefined;
+
+    if (cart.length > 0) {
+      const payload = cleanUndefined({
+        id: cartSessionId,
+        items: cart.map(i => ({
+          productId: i.id,
+          name: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          image: i.images?.[0] || (i as any).image || ''
+        })),
+        totalItems,
+        totalPrice,
+        customerEmail: userEmail,
+        status: 'active',
+        lastUpdated: new Date().toISOString()
+      });
+
+      setDoc(doc(db, 'carts', cartSessionId), payload as any, { merge: true })
+        .catch(err => console.warn("Abandoned cart sync warning:", err));
+    } else {
+      updateDoc(doc(db, 'carts', cartSessionId), {
+        status: 'cleared',
+        lastUpdated: new Date().toISOString()
+      }).catch(() => {});
+    }
+  }, [cart, cartSessionId]);
 
   const addToCart = (product: Product, quantity: number = 1) => {
     setCart(prev => {

@@ -1,10 +1,11 @@
 import { motion } from 'motion/react';
 import { Plus, Minus, HelpCircle, Phone, Mail, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const FAQS = [
   {
-    category: "Solar Energy",
+    topic: "Solar Energy",
     items: [
       {
         question: "How much can I actually save on my JPS bill?",
@@ -12,7 +13,7 @@ const FAQS = [
       },
       {
         question: "Do solar panels work during a power cut?",
-        answer: "Standard grid-tied systems will shut down during a power cut for safety. However, if you choose a hybrid or off-grid system with battery storage (like our Platinum Package), you will have continuous power even when the grid is down."
+        answer: "Standard grid-tied systems will shut down during a power cut for safety. However, if you choose a hybrid or off-grid system with battery storage, you will have continuous power even when the grid is down."
       },
       {
         question: "How long do solar panels last?",
@@ -21,7 +22,7 @@ const FAQS = [
     ]
   },
   {
-    category: "Products & Orders",
+    topic: "Products & Orders",
     items: [
       {
         question: "Do you offer islandwide delivery?",
@@ -34,7 +35,7 @@ const FAQS = [
     ]
   },
   {
-    category: "Service & Installation",
+    topic: "Service & Installation",
     items: [
       {
         question: "Does Samkhi provide installation services?",
@@ -49,7 +50,7 @@ const FAQS = [
 ];
 
 export default function FAQ() {
-  const [activeCategory, setActiveCategory] = useState(FAQS[0].category);
+  const [activeTopic, setActiveTopic] = useState(FAQS[0].topic);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
@@ -82,21 +83,21 @@ export default function FAQ() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12">
           {/* Categories Sidebar */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-4">Categories</p>
-            {FAQS.map((cat) => (
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 ml-4">Topics</p>
+            {FAQS.map((topicItem) => (
               <button
-                key={cat.category}
+                key={topicItem.topic}
                 onClick={() => {
-                  setActiveCategory(cat.category);
+                  setActiveTopic(topicItem.topic);
                   setOpenIndex(null);
                 }}
                 className={`w-full text-left px-6 py-4 rounded-2xl font-bold transition-all ${
-                  activeCategory === cat.category 
+                  activeTopic === topicItem.topic 
                     ? "bg-secondary text-white shadow-xl shadow-secondary/20" 
                     : "text-slate-500 hover:bg-slate-50"
                 }`}
               >
-                {cat.category}
+                {topicItem.topic}
               </button>
             ))}
             
@@ -118,7 +119,7 @@ export default function FAQ() {
 
           {/* FAQ Accordion */}
           <div className="lg:col-span-3 space-y-4">
-            {FAQS.find(c => c.category === activeCategory)?.items.map((faq, idx) => (
+            {FAQS.find(c => c.topic === activeTopic)?.items.map((faq, idx) => (
               <div 
                 key={idx}
                 className={`border rounded-[2rem] transition-all duration-500 overflow-hidden ${
@@ -160,13 +161,13 @@ export default function FAQ() {
               Ready to Save <br /> <span className="italic text-cta">Real Money?</span>
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center relative z-10">
-              <button className="btn-secondary px-10 py-5 rounded-2xl text-lg font-black uppercase tracking-widest flex items-center justify-center gap-3">
+              <Link to="/solar#quote" className="btn-secondary px-10 py-5 rounded-2xl text-lg font-black uppercase tracking-widest flex items-center justify-center gap-3">
                 Request Free Quote
                 <MessageSquare size={20} />
-              </button>
-              <button className="bg-white/10 text-white backdrop-blur-md px-10 py-5 rounded-2xl text-lg font-black uppercase tracking-widest hover:bg-white/20 transition-all">
-                View Packages
-              </button>
+              </Link>
+              <Link to="/solar" className="bg-white/10 text-white backdrop-blur-md px-10 py-5 rounded-2xl text-lg font-black uppercase tracking-widest hover:bg-white/20 transition-all inline-flex items-center justify-center">
+                Solar Solutions
+              </Link>
             </div>
           </div>
         </div>

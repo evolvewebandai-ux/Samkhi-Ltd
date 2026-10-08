@@ -1,0 +1,338 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Auth helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && 
+        request.auth.token != null && 
+        'email' in request.auth.token && 
+        (
+          request.auth.token.email.lower() == 'evolvewebandai@gmail.com' ||
+          (exists(/databases/$(database)/documents/user_roles/$(request.auth.token.email.lower())) && 
+           get(/databases/$(database)/documents/user_roles/$(request.auth.token.email.lower())).data.role == 'super-admin')
+        );
+    }
+
+    function isManager() {
+      return isSignedIn() && 
+        request.auth.token != null && 
+        'email' in request.auth.token && 
+        (
+          request.auth.token.email.lower() == 'evolvewebandai@gmail.com' ||
+          (exists(/databases/$(database)/documents/user_roles/$(request.auth.token.email.lower())) && 
+           (get(/databases/$(database)/documents/user_roles/$(request.auth.token.email.lower())).data.role == 'manager' ||
+            get(/databases/$(database)/documents/user_roles/$(request.auth.token.email.lower())).data.role == 'super-admin'))
+        );
+    }
+
+    function isCustomerOwner(customerId) {
+      return isSignedIn() && 
+        request.auth.token != null && 
+        'email' in request.auth.token && 
+        customerId.lower() == request.auth.token.email.lower().replace('[^a-zA-Z0-9]', '_');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[#a-zA-Z0-9_-]+$');
+    }
+
+    // Schemas & standalone validation helpers
+    function isValidProduct(p) {
+      return p.keys().hasAll(['id', 'name', 'price', 'inStock']) &&
+        p.id is string && p.id.size() <= 200 &&
+        p.name is string && p.name.size() <= 200 &&
+        (p.price is int || p.price is float) && p.price >= 0 &&
+        p.inStock is bool;
+    }
+
+    function isValidOrder(o) {
+      return o.keys().hasAll(['id', 'customerEmail', 'total']) &&
+        o.id is string && o.id.size() <= 200 &&
+        o.customerEmail is string && o.customerEmail.size() <= 200 &&
+        (o.total is int || o.total is float) && o.total >= 0 &&
+        (!('customerName' in o) || (o.customerName is string && o.customerName.size() <= 200)) &&
+        (!('status' in o) || (o.status is string && o.status.size() <= 50)) &&
+        (!('paymentStatus' in o) || (o.paymentStatus is string && o.paymentStatus.size() <= 50)) &&
+        (!('fulfillmentStatus' in o) || (o.fulfillmentStatus is string && o.fulfillmentStatus.size() <= 50));
+    }
+
+    function isValidDiscount(d) {
+      return d.keys().hasAll(['id', 'code', 'type', 'value', 'status']) &&
+        d.id is string && d.id.size() <= 200 &&
+        d.code is string && d.code.size() <= 50 &&
+        d.type is string && d.type.size() <= 50 &&
+        d.value is string && d.value.size() <= 100 &&
+        d.status is string && d.status.size() <= 50;
+    }
+
+    function isValidCustomer(c) {
+      return c.keys().hasAll(['id', 'name', 'email']) &&
+        c.id is string && c.id.size() <= 200 &&
+        c.name is string && c.name.size() <= 200 &&
+        c.email is string && c.email.size() <= 200;
+    }
+
+    function isValidProductReview(r) {
+      return r.keys().hasAll(['productId', 'productName', 'rating', 'comment', 'createdAt']) &&
+        r.productId is string && r.productId.size() <= 200 &&
+        r.productName is string && r.productName.size() <= 200 &&
+        (r.rating is int || r.rating is float) && r.rating >= 1 && r.rating <= 5 &&
+        r.comment is string && r.comment.size() <= 2000 &&
+        r.createdAt is string && r.createdAt.size() <= 100;
+    }
+
+    function isValidLead(l) {
+      return l.keys().hasAll(['id', 'name', 'email', 'source', 'stage', 'createdAt']) &&
+        l.id is string && l.id.size() <= 200 &&
+        l.name is string && l.name.size() <= 200 &&
+        l.email is string && l.email.size() <= 200 &&
+        l.source is string && l.source.size() <= 50 &&
+        l.stage is string && l.stage.size() <= 50 &&
+        l.createdAt is string && l.createdAt.size() <= 100;
+    }
+
+    function isValidTemplate(t) {
+      return ('id' in t) && t.id is string && t.id.size() <= 200 &&
+        ('name' in t) && t.name is string && t.name.size() <= 200 &&
+        ('event_trigger' in t) && t.event_trigger is string && t.event_trigger.size() <= 100 &&
+        ('channel' in t) && t.channel is string && t.channel.size() <= 50 &&
+        ('is_active' in t) && t.is_active is bool &&
+        ('subject' in t) && t.subject is string && t.subject.size() <= 200 &&
+        ('body_html' in t) && t.body_html is string && t.body_html.size() <= 60000;
+    }
+
+    function isValidLog(l) {
+      return ('template_id' in l) && l.template_id is string && l.template_id.size() <= 200 &&
+        ('event_trigger' in l) && l.event_trigger is string && l.event_trigger.size() <= 100 &&
+        ('to_email' in l) && l.to_email is string && l.to_email.size() <= 200 &&
+        ('status' in l) && l.status is string && l.status.size() <= 50 &&
+        ('sent_at' in l) && l.sent_at is string && l.sent_at.size() <= 100;
+    }
+
+    function isValidReturn(r) {
+      return r.keys().hasAll(['id', 'orderId', 'customerEmail', 'status']) &&
+        r.id is string && r.id.size() <= 200 &&
+        r.orderId is string && r.orderId.size() <= 200 &&
+        r.customerEmail is string && r.customerEmail.size() <= 200 &&
+        r.status is string && r.status.size() <= 50;
+    }
+
+    // Collection Security Rules
+
+    // Products: Read active, Admin edit
+    match /products/{productId} {
+      allow read, get, list: if true;
+      allow create, update: if isManager() && isValidId(productId) && isValidProduct(request.resource.data);
+      allow delete: if isManager() && isValidId(productId);
+    }
+
+    // Orders: Anyone can create at checkout, Only owner or manager read, only manager updates key fields or partial allowed updates for timeline logs and status tracking
+    match /orders/{orderId} {
+      allow create: if isValidId(orderId) && isValidOrder(request.resource.data);
+      allow list: if isManager() || 
+                    (isSignedIn() && 
+                     request.auth.token != null && 
+                     'email' in request.auth.token && 
+                     resource.data.customerEmail.lower() == request.auth.token.email.lower());
+      allow get: if isManager() || 
+                    (isSignedIn() && 
+                     request.auth.token != null && 
+                     'email' in request.auth.token && 
+                     resource.data.customerEmail.lower() == request.auth.token.email.lower()) ||
+                    (!isSignedIn() && isValidId(orderId));
+      allow update: if isManager() && isValidId(orderId) && isValidOrder(request.resource.data);
+      allow delete: if isManager() && isValidId(orderId);
+    }
+
+    // Discounts: Check active coupon, Admin list, Admin write, Client increments used counter
+    match /discounts/{discountId} {
+      allow get: if true;
+      allow list: if isManager();
+      allow create, delete: if isManager() && isValidId(discountId) && (request.method == 'delete' || isValidDiscount(request.resource.data));
+      allow update: if (isManager() && isValidId(discountId) && isValidDiscount(request.resource.data)) || 
+                       (isValidId(discountId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used']));
+    }
+
+    // Customers: Manage profiles, check balance and update preferences safely
+    match /customers/{customerId} {
+      allow list: if isManager();
+      allow get: if isManager() || isCustomerOwner(customerId);
+      allow create: if isManager() || 
+                    (isCustomerOwner(customerId) && isValidCustomer(request.resource.data)) ||
+                    (!isSignedIn() && isValidId(customerId) && isValidCustomer(request.resource.data));
+      allow update: if isManager() || 
+                    (isCustomerOwner(customerId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spent', 'orders', 'lastOrder', 'location', 'loyaltyPoints', 'loyaltyHistory', 'wishlist', 'addresses', 'savedPayments'])) ||
+                    (!isSignedIn() && isValidId(customerId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['spent', 'orders', 'lastOrder', 'location', 'loyaltyPoints', 'loyaltyHistory', 'wishlist', 'addresses', 'savedPayments']));
+      allow delete: if isManager() && isValidId(customerId);
+    }
+
+    // Product reviews: Anyone can read, signed in/guest users can create/submit, Admin delete
+    match /product_reviews/{reviewId} {
+      allow read, get, list: if true;
+      allow create: if isValidProductReview(request.resource.data);
+      allow update, delete: if isManager();
+    }
+
+    // Administrative user roles (RBAC)
+    match /user_roles/{emailId} {
+      allow list: if isManager();
+      allow get: if isSignedIn() && (
+        request.auth.token != null && 'email' in request.auth.token && 
+        (request.auth.token.email.lower() == emailId.lower() || isManager())
+      );
+      allow create, update: if isSuperAdmin() || (
+        isSignedIn() && 
+        request.auth.token != null && 
+        'email' in request.auth.token && 
+        request.auth.token.email.lower() == 'evolvewebandai@gmail.com' && 
+        request.auth.token.email.lower() == emailId.lower()
+      );
+      allow delete: if isSuperAdmin() && emailId.lower() != 'evolvewebandai@gmail.com';
+    }
+
+    // =========================================================================
+    //            🗳️ WAREHOUSE INVENTORY SECURITY MODULE RULES
+    // =========================================================================
+    match /inventory_levels/{levelId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isManager() && isValidId(levelId);
+    }
+
+    match /inventory_transactions/{txId} {
+      allow read, get, list: if true;
+      allow write, create: if isManager() && isValidId(txId);
+    }
+
+    match /suppliers/{supplierId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isManager() && isValidId(supplierId);
+    }
+
+    match /purchase_orders/{poId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isManager() && isValidId(poId);
+    }
+
+    match /purchase_order_items/{itemId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isManager() && isValidId(itemId);
+    }
+
+    // Collections, collection products catalog matching rules
+    match /collections/{collectionId} {
+      allow read, get, list: if true;
+      allow create, update, delete: if isManager() && isValidId(collectionId);
+    }
+
+    match /shipping_rates/{rateId} {
+      allow read, get, list: if true;
+      allow create, update, delete: if isManager() && isValidId(rateId);
+    }
+
+    match /pickup_locations/{locationId} {
+      allow read, get, list: if true;
+      allow create, update, delete: if isManager() && isValidId(locationId);
+    }
+
+    match /collection_products/{id} {
+      allow read, get, list: if true;
+      allow create, update, delete: if isManager() && isValidId(id);
+    }
+
+    match /tags/{tagId} {
+      allow read, get, list: if true;
+      allow create, update, delete: if isManager() && isValidId(tagId);
+    }
+
+    match /activityLogs/{logId} {
+      allow read, get, list: if isManager();
+      allow create: if true;
+      allow update, delete: if isManager();
+    }
+
+    match /notification_templates/{templateId} {
+      allow read, get, list: if true;
+      allow create: if isValidId(templateId) && 
+        templateId in [
+          'order_placed', 'payment_confirmed', 'order_picked', 'order_packed', 
+          'ready_for_pickup', 'ready_for_delivery', 'order_completed', 
+          'order_cancelled', 'shipping_update', 'abandoned_cart', 
+          'welcome_email', 'password_reset', 'low_stock_alert_admin'
+        ] && 
+        isValidTemplate(request.resource.data);
+      allow update, delete: if isManager() && isValidId(templateId);
+    }
+
+    match /notification_logs/{logId} {
+      allow read, get, list: if isManager();
+      allow create: if isValidId(logId) && isValidLog(request.resource.data);
+      allow update, delete: if isManager() && isValidId(logId);
+    }
+
+    match /settings/{settingsId} {
+      allow read, get: if true;
+      allow list: if isManager();
+      allow create, update, delete: if isManager() && isValidId(settingsId);
+    }
+
+    match /leads/{leadId} {
+      allow create: if isValidId(leadId) && isValidLead(request.resource.data);
+      allow read, get, list: if isManager();
+      allow update: if isManager() && isValidId(leadId) && isValidLead(request.resource.data);
+      allow delete: if isManager() && isValidId(leadId);
+    }
+
+    // Returns & RMA Claims
+    match /returns/{returnId} {
+      allow list: if isManager() || 
+                    (isSignedIn() && 
+                     request.auth.token != null && 
+                     'email' in request.auth.token && 
+                     resource.data.customerEmail.lower() == request.auth.token.email.lower());
+      allow get: if isManager() || 
+                    (isSignedIn() && 
+                     request.auth.token != null && 
+                     'email' in request.auth.token && 
+                     resource.data.customerEmail.lower() == request.auth.token.email.lower()) ||
+                    isValidId(returnId);
+      allow create: if isValidId(returnId) && isValidReturn(request.resource.data);
+      allow update, delete: if isManager() && isValidId(returnId);
+    }
+
+    // Warranties
+    match /warranties/{warrantyId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isManager() && isValidId(warrantyId);
+    }
+
+    // Abandoned Carts / Active Cart Sync
+    match /carts/{cartId} {
+      allow list: if isManager();
+      allow get: if isManager() || isValidId(cartId);
+      allow create, update: if isValidId(cartId);
+      allow delete: if isManager() && isValidId(cartId);
+    }
+
+    // Installations & Field Jobs
+    match /installations/{jobId} {
+      allow read, get, list: if true;
+      allow write, create, update, delete: if isManager() && isValidId(jobId);
+    }
+
+    // Connection testing
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

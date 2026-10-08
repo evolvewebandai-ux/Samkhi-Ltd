@@ -3,7 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Google AI Studio App</title>
+    <meta name="description" content="Samkhi Limited - Jamaica's premier supplier of premium LED Lighting, Solar Panels, Inverters, Batteries, and custom solar energy solutions based in Ocho Rios and Drax Hall." />
+    <title>Samkhi Limited | Premier LED Lighting & Solar Solutions Jamaica</title>
+    <!-- Google Analytics (GA4) Boostrap & Telemetry Interface Tag -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-TELEMETRY"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-TELEMETRY', { 'anonymize_ip': true });
+      // Event tracker helper for console debugging
+      window.logCustomTelemetry = function(eventName, eventParams) {
+        console.log(`[GA4 telemetry Event: "${eventName}"]`, eventParams);
+        if (typeof gtag === 'function') {
+          gtag('event', eventName, eventParams);
+        }
+      };
+    </script>
   </head>
   <body>
     <div id="root"></div>

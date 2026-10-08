@@ -2,8 +2,6 @@ import { motion } from 'motion/react';
 import { Sun, CheckCircle2, Zap, ArrowRight, ShieldCheck, BarChart3, CloudSun, Clock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SolarQuoteForm from '../components/SolarQuoteForm';
-import { SOLAR_PACKAGES } from '../data';
-import SolarPackageCard from '../components/SolarPackageCard';
 
 export default function SolarSolutions() {
   return (
@@ -37,8 +35,8 @@ export default function SolarSolutions() {
               Tired of rising JPS costs? Samkhi Limited provides end-to-end solar solutions—from site assessment to professional installation—helping you generate your own clean, reliable electricity.
             </p>
             <div className="flex flex-wrap gap-4">
-               <a href="#quote" className="btn-cta text-lg px-10 border border-cta">Get Your Solution</a>
-               <a href="#packages" className="btn-secondary border border-white/20 text-lg">View Packages</a>
+               <a href="#quote" className="btn-cta text-lg px-10 border border-cta">Get A Custom Quote</a>
+               <a href="#process" className="btn-secondary border border-white/20 text-lg">Our 4-Step Process</a>
             </div>
           </div>
         </div>
@@ -82,27 +80,8 @@ export default function SolarSolutions() {
         </div>
       </section>
 
-      {/* Packages Section */}
-      <section id="packages" className="py-24 bg-surface">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-8">
-            <div className="max-w-xl">
-               <span className="text-primary font-black uppercase tracking-[0.3em] text-xs">Curated Solutions</span>
-               <h2 className="text-4xl font-display font-black text-secondary mt-2">Ready-To-Install Packages</h2>
-            </div>
-            <p className="text-slate-500 max-w-sm">All packages include core hardware. Professional installation and mounting hardware can be added upon request.</p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-5xl mx-auto">
-            {SOLAR_PACKAGES.map(pkg => (
-              <SolarPackageCard key={pkg.id} pkg={pkg} />
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* The Process */}
-      <section className="py-24 bg-white">
+      <section id="process" className="py-24 bg-surface">
         <div className="max-w-7xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-display font-black text-secondary mb-6">Our 4-Step Process</h2>

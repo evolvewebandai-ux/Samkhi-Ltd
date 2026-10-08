@@ -1,12 +1,13 @@
 {
   "name": "Samkhi Limited",
-  "description": "Enterprise-grade LED lighting and solar energy solutions ecommerce and quote platform for Jamaica.",
+  "description": "Enterprise-grade LED lighting and solar energy solutions ecommerce platform with real-time Swiss-Modern Admin Command Center and Jamaican Parish logistics.",
   "requestFramePermissions": [
     "geolocation"
   ],
   "majorCapabilities": [
     "Ecommerce",
     "Quote Generation",
-    "Inventory Management"
+    "Inventory Management",
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
 }

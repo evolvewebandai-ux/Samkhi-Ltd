@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Search, Menu, X, Phone, Mail, MapPin } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
@@ -8,8 +8,39 @@ import { cn } from '../lib/utils';
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [navSearchQuery, setNavSearchQuery] = useState('');
   const { totalItems } = useCart();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Close search on escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsSearchOpen(false);
+      }
+    };
+    if (isSearchOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSearchOpen]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (navSearchQuery.trim()) {
+      navigate(`/shop?q=${encodeURIComponent(navSearchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setNavSearchQuery('');
+    }
+  };
+
+  const handleQuickSearch = (term: string) => {
+    navigate(`/shop?q=${encodeURIComponent(term)}`);
+    setIsSearchOpen(false);
+    setNavSearchQuery('');
+  };
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -18,7 +49,6 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: 'Home', href: '/' },
     { name: 'Shop', href: '/shop' },
     { name: 'Solar Solutions', href: '/solar' },
     { name: 'Commercial', href: '/commercial' },
@@ -57,7 +87,7 @@ export default function Navbar() {
               alt="Samkhi Ltd." 
               className={cn(
                 "w-auto object-contain transition-all duration-500",
-                isScrolled ? "h-12 md:h-14" : "h-14 md:h-20"
+                isScrolled ? "h-[40px] md:h-[48px]" : "h-[48px] md:h-[68px]"
               )} 
               referrerPolicy="no-referrer"
             />
@@ -81,11 +111,21 @@ export default function Navbar() {
                 )} />
               </Link>
             ))}
+            <Link 
+              to="/solar" 
+              className="px-5 py-2.5 bg-[#10B571] hover:bg-[#0da264] text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] shadow-sm flex items-center justify-center gap-1.5 ml-2 cursor-pointer select-none"
+            >
+              Get a Quote
+            </Link>
           </div>
 
           {/* Actions */}
           <div className="flex items-center gap-2 lg:gap-4">
-            <button className="text-secondary hover:text-primary transition-all p-3 rounded-xl hover:bg-slate-50">
+            <button 
+              onClick={() => setIsSearchOpen(true)}
+              className="text-secondary hover:text-primary transition-all p-3 rounded-xl hover:bg-slate-50 cursor-pointer"
+              aria-label="Open Search"
+            >
               <Search size={20} className="stroke-[2.5]" />
             </button>
             <Link to="/account" className="text-secondary hover:text-primary transition-all p-3 rounded-xl hover:bg-slate-50 hidden sm:block">
@@ -136,11 +176,78 @@ export default function Navbar() {
                   {link.name}
                 </Link>
               ))}
-              <div className="mt-auto pt-8 border-t border-slate-100 flex flex-col gap-4">
-                <Link to="/cart" onClick={() => setIsOpen(false)} className="btn-primary w-full">Cart ({totalItems})</Link>
-                <Link to="/solar-packages" onClick={() => setIsOpen(false)} className="btn-cta w-full">Get A Quote</Link>
+              <div className="mt-auto pt-8 border-t border-slate-100 flex flex-col gap-3">
+                <Link to="/account" onClick={() => setIsOpen(false)} className="btn-secondary w-full text-center py-2.5">My Account & Orders</Link>
+                <Link to="/cart" onClick={() => setIsOpen(false)} className="btn-primary w-full text-center py-2.5">Cart ({totalItems})</Link>
+                <Link to="/solar" onClick={() => setIsOpen(false)} className="btn-cta w-full text-center py-2.5">Get A Quote</Link>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dynamic Search Modal Overlay */}
+      <AnimatePresence>
+        {isSearchOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-secondary/80 backdrop-blur-md z-[100] flex items-start justify-center pt-24 px-4"
+            onClick={() => setIsSearchOpen(false)}
+          >
+            <motion.div
+              initial={{ y: -50, scale: 0.95, opacity: 0 }}
+              animate={{ y: 0, scale: 1, opacity: 1 }}
+              exit={{ y: -50, scale: 0.95, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <form onSubmit={handleSearchSubmit} className="p-6 border-b border-slate-100 flex items-center gap-4">
+                <Search size={22} className="text-slate-400 stroke-[2.5]" />
+                <input
+                  type="text"
+                  placeholder="Search by name, SKU, or keyword..."
+                  value={navSearchQuery}
+                  onChange={(e) => setNavSearchQuery(e.target.value)}
+                  className="flex-1 text-slate-800 text-lg outline-none placeholder-slate-400 font-medium bg-transparent"
+                  autoFocus
+                />
+                {navSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setNavSearchQuery('')}
+                    className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 hover:text-secondary transition-all cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={!navSearchQuery.trim()}
+                  className="px-5 py-2.5 bg-[#10B571] hover:bg-[#0da264] text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  Search
+                </button>
+              </form>
+
+              <div className="p-6 bg-slate-50/50">
+                <h4 className="text-[10px] uppercase tracking-widest font-black text-slate-400 mb-3 font-mono">Popular Searches</h4>
+                <div className="flex flex-wrap gap-2">
+                  {['Solar Panel', 'Inverter', 'LED Bulb', 'Battery', 'Street Light', 'Flood Light'].map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => handleQuickSearch(term)}
+                      className="px-3 py-1.5 bg-white border border-slate-200 hover:border-[#10B571] hover:text-[#10B571] rounded-lg text-xs font-bold text-slate-600 transition-all shadow-xs cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
